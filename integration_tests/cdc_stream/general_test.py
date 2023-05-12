@@ -211,34 +211,34 @@ class GeneralTest(test_base.CdcStreamTest):
     utils.create_test_file(os.path.join(self.local_base_dir, filename), 1024)
     self._start()
 
-    manifest_chunk = utils.get_ssh_command_output('find %s -type f' %
-                                                  self.cache_dir).rstrip('\r\n')
+    manifest_chunk = utils.get_ssh_command_output(
+        f'find {self.cache_dir} -type f').rstrip('\r\n')
 
     # Read the file without caching.
-    utils.get_ssh_command_output('dd if=%s bs=1K of=/dev/null iflag=direct' %
-                                 remote_file_path)
+    utils.get_ssh_command_output(
+        f'dd if={remote_file_path} bs=1K of=/dev/null iflag=direct')
 
     # Find any data chunk.
-    data_chunks = utils.get_ssh_command_output('find %s -type f' %
-                                               self.cache_dir)
+    data_chunks = utils.get_ssh_command_output(f'find {self.cache_dir} -type f')
     chunk_path = manifest_chunk
     for chunk in data_chunks.splitlines():
       if manifest_chunk not in chunk:
         chunk_path = chunk.rstrip('\r\n')
         break
-    chunk_data = utils.get_ssh_command_output('cat %s' % chunk_path)
+    chunk_data = utils.get_ssh_command_output(f'cat {chunk_path}')
 
     # Modify the chosen data chunk.
-    utils.get_ssh_command_output('dd if=/dev/zero of=%s bs=1 count=3' %
-                                 chunk_path)
+    utils.get_ssh_command_output(f'dd if=/dev/zero of={chunk_path} bs=1 count=3')
     self.assertNotEqual(chunk_data,
-                        utils.get_ssh_command_output('cat %s' % chunk_path))
+                        utils.get_ssh_command_output(f'cat {chunk_path}'))
 
     # Read the file again, the chunk should be recovered.
     self._test_dir_content(files=[filename], dirs=[])
-    self.assertEqual(chunk_data,
-                     utils.get_ssh_command_output('cat %s' % chunk_path),
-                     'The corrupted chunk was not recreated')
+    self.assertEqual(
+        chunk_data,
+        utils.get_ssh_command_output(f'cat {chunk_path}'),
+        'The corrupted chunk was not recreated',
+    )
 
   def test_unicode(self):
     """Stream a directory with non-ASCII Unicode paths."""

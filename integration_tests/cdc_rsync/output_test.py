@@ -189,7 +189,7 @@ class OutputTest(test_base.CdcRsyncTest):
   def test_json_per_file(self):
     """Runs rsync with -v --json."""
 
-    local_path = self.local_base_dir + 'test.txt'
+    local_path = f'{self.local_base_dir}test.txt'
     utils.create_test_file(local_path, 1024)
     res = utils.run_rsync(local_path, self.remote_base_dir, '-v', '--json')
     self._assert_rsync_success(res)
@@ -211,7 +211,7 @@ class OutputTest(test_base.CdcRsyncTest):
   def test_json_total(self):
     """Runs rsync with --json."""
 
-    local_path = self.local_base_dir + 'test.txt'
+    local_path = f'{self.local_base_dir}test.txt'
     utils.create_test_file(local_path, 1024)
     res = utils.run_rsync(local_path, self.remote_base_dir, '--json')
     self._assert_rsync_success(res)
@@ -228,15 +228,13 @@ class OutputTest(test_base.CdcRsyncTest):
   def parse_json(self, output):
     """Parses the JSON lines of output."""
     lines = output.split('\r\n')
-    json_values = []
-    for line in lines:
-      if str.startswith(line, '{'):
-        json_values.append(json.loads(line.strip()))
-    return json_values
+    return [
+        json.loads(line.strip()) for line in lines if str.startswith(line, '{')
+    ]
 
   def is_float_or_int(self, val):
     """Returns true if val is a float or an int."""
-    return isinstance(val, float) or isinstance(val, int)
+    return isinstance(val, (float, int))
 
 
 if __name__ == '__main__':

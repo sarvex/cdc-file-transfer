@@ -62,16 +62,14 @@ def _remove_carriage_return_lines(text):
       string: Text with lines removed.
   """
 
-  # Some lines have \r\r\n, treat them properly.
-  ret = ''
-  for line in text.replace('\r\r', '\r').split('\r\n'):
-    ret += line.split('\r')[-1] + '\r\n'
-  return ret
+  return ''.join(
+      line.split('\r')[-1] + '\r\n'
+      for line in text.replace('\r\r', '\r').split('\r\n'))
 
 
 def target(dir):
   """Prepends user@host: to dir."""
-  return USER_HOST + ":" + dir
+  return f"{USER_HOST}:{dir}"
 
 
 def run_rsync(*args):
@@ -93,7 +91,7 @@ def run_rsync(*args):
   # '--exclude', 'file' is passed. Use '--exclude=file' instead.
   args_list = list(filter(None, args))
   for n in range(len(args_list) - 1, 0, -1):
-    if args_list[n][0] != '-' and not ':' in args_list[n]:
+    if args_list[n][0] != '-' and ':' not in args_list[n]:
       args_list[n] = target(args_list[n])
       break
 
@@ -178,10 +176,10 @@ def sha1sum_local(filepath):
   sha1 = hashlib.sha1()
   with open(filepath, 'rb') as f:
     while True:
-      data = f.read(SHA1_BUF_SIZE)
-      if not data:
+      if data := f.read(SHA1_BUF_SIZE):
+        sha1.update(data)
+      else:
         break
-      sha1.update(data)
   return sha1.hexdigest()
 
 
@@ -194,7 +192,7 @@ def sha1sum_remote(filepath):
   Returns:
       string: sha1 hash
   """
-  return get_ssh_command_output('sha1sum %s' % filepath)[0:SHA1_LEN]
+  return get_ssh_command_output(f'sha1sum {filepath}')[:SHA1_LEN]
 
 
 def sha1_matches(local_path, remote_path):
@@ -278,7 +276,7 @@ def does_directory_exist_remotely(path):
   Returns:
       bool: True if a directory exists.
   """
-  return 'yes' in get_ssh_command_output('test -d %s && echo "yes"' % path)
+  return 'yes' in get_ssh_command_output(f'test -d {path} && echo "yes"')
 
 
 def does_file_exist_remotely(path):
@@ -290,7 +288,7 @@ def does_file_exist_remotely(path):
   Returns:
       bool: True if a file exists.
   """
-  return 'yes' in get_ssh_command_output('test -f %s && echo "yes"' % path)
+  return 'yes' in get_ssh_command_output(f'test -f {path} && echo "yes"')
 
 
 def change_modified_time(path):
@@ -313,8 +311,7 @@ def get_ssh_command_output(cmd):
       string: The output of the ssh command.
   """
   ssh_command = os.environ.get('CDC_SSH_COMMAND') or "ssh"
-  full_ssh_cmd = '%s -tt "%s" -- %s' % (ssh_command, USER_HOST,
-                                        quote_argument(cmd))
+  full_ssh_cmd = f'{ssh_command} -tt "{USER_HOST}" -- {quote_argument(cmd)}'
   res = subprocess.run(full_ssh_cmd, capture_output=True)
   if res.returncode != 0:
     logging.warning('SSH command %s failed with code %i, stderr: %s', cmd,
@@ -338,9 +335,8 @@ def get_sorted_files(remote_dir, pattern='"*.[t|d]*"'):
   Returns:
       string: Sorted list of files found in the remote directory.
   """
-  find_res = get_ssh_command_output('cd %s && find -name %s -print' %
-                                    (remote_dir, pattern))
+  find_res = get_ssh_command_output(
+      f'cd {remote_dir} && find -name {pattern} -print')
 
-  found = sorted(
+  return sorted(
       filter(lambda item: item and item != '.', find_res.split('\r\n')))
-  return found

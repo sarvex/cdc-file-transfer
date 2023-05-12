@@ -56,8 +56,8 @@ class CacheTest(test_base.CdcStreamTest):
     self._start()
     self._test_dir_content(files=[filename], dirs=[])
     # Read the file => fill the cache.file_transfer
-    utils.get_ssh_command_output('cat %s > /dev/null' %
-                                 posixpath.join(self.remote_base_dir, filename))
+    utils.get_ssh_command_output(
+        f'cat {posixpath.join(self.remote_base_dir, filename)} > /dev/null')
     cache_size = self._get_cache_size_in_bytes()
     cache_files = utils.get_ssh_command_output(self.cache_cmd)
 
@@ -68,8 +68,8 @@ class CacheTest(test_base.CdcStreamTest):
     self._start()
     self._assert_cdc_fuse_mounted()
     self._test_dir_content(files=[filename], dirs=[])
-    utils.get_ssh_command_output('cat %s > /dev/null' %
-                                 posixpath.join(self.remote_base_dir, filename))
+    utils.get_ssh_command_output(
+        f'cat {posixpath.join(self.remote_base_dir, filename)} > /dev/null')
     # The same manifest should be re-used. No change in the cache is expected.
     self.assertEqual(self._get_cache_size_in_bytes(), cache_size)
     # The mtimes of the files should have changed after each Get() operation.
@@ -87,8 +87,8 @@ class CacheTest(test_base.CdcStreamTest):
         os.path.join(self.local_base_dir, filename), 11 * 1024 * 1024)
     self._start()
     self._test_dir_content(files=[filename], dirs=[])
-    utils.get_ssh_command_output('cat %s > /dev/null' %
-                                 posixpath.join(self.remote_base_dir, filename))
+    utils.get_ssh_command_output(
+        f'cat {posixpath.join(self.remote_base_dir, filename)} > /dev/null')
     # Extract the oldest file.
     oldest_ts = utils.get_ssh_command_output(ts_cmd)
     original = utils.get_ssh_command_output(self.ls_cmd)
@@ -99,7 +99,7 @@ class CacheTest(test_base.CdcStreamTest):
         os.path.join(self.local_base_dir, filename2), 11 * 1024 * 1024)
     self.assertTrue(self._wait_until_remote_dir_changed(original))
     utils.get_ssh_command_output(
-        'cat %s > /dev/null' % posixpath.join(self.remote_base_dir, filename2))
+        f'cat {posixpath.join(self.remote_base_dir, filename2)} > /dev/null')
 
     # Wait some time till the cache is cleaned up.
     wait_sec = self.cleanup_timeout_sec + self.access_idle_timeout_sec + self.cleanup_time

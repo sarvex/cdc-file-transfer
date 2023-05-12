@@ -47,8 +47,8 @@ class CdcRsyncTest(unittest.TestCase):
         prefix=f'_cdc_rsync_test_{now_str}')
     self.local_base_dir = self.tmp_dir.name + '\\'
     self.remote_base_dir = f'/tmp/_cdc_rsync_test_{now_str}/'
-    self.local_data_path = self.local_base_dir + 'testdata.dat'
-    self.remote_data_path = self.remote_base_dir + 'testdata.dat'
+    self.local_data_path = f'{self.local_base_dir}testdata.dat'
+    self.remote_data_path = f'{self.remote_base_dir}testdata.dat'
 
     logging.info('Local base dir: "%s"', self.local_base_dir)
     logging.info('Remote base dir: "%s"', self.remote_base_dir)
@@ -63,7 +63,7 @@ class CdcRsyncTest(unittest.TestCase):
 
   def _assert_rsync_success(self, res):
     """Asserts if the return code is 0 and outputs return message with args."""
-    self.assertEqual(res.returncode, 0, 'Return value is ' + str(res))
+    self.assertEqual(res.returncode, 0, f'Return value is {str(res)}')
 
   def _assert_regex(self, regex, value):
     """Asserts that the regex string matches the given value."""
@@ -89,14 +89,14 @@ class CdcRsyncTest(unittest.TestCase):
         pattern (string, optional): Pattern for matching file names.
     """
     find_res = utils.get_ssh_command_output(
-        'cd %s && find -name %s -print' %
-        (remote_dir or self.remote_base_dir, pattern))
+        f'cd {remote_dir or self.remote_base_dir} && find -name {pattern} -print'
+    )
 
     # Note that assertCountEqual compares items independently of order
     # (not just the size of the list).
     found = sorted(
         filter(lambda item: item and item != '.', find_res.split('\r\n')))
-    expected = sorted(['./' + f for f in file_list])
+    expected = sorted([f'./{f}' for f in file_list])
     self.assertListEqual(found, expected)
 
   def _assert_remote_dir_does_not_contain(self, file_list):
@@ -106,9 +106,9 @@ class CdcRsyncTest(unittest.TestCase):
         file_list (list of strings): List of relative file paths to check
     """
     find_res = utils.get_ssh_command_output(
-        'cd %s && find -name "*.[t|d]*" -print' % self.remote_base_dir)
+        f'cd {self.remote_base_dir} && find -name "*.[t|d]*" -print')
 
-    found = set(file_name for file_name in filter(None, find_res.split('\n')))
+    found = set(filter(None, find_res.split('\n')))
 
     for file in file_list:
-      self.assertNotIn('./' + file, found)
+      self.assertNotIn(f'./{file}', found)

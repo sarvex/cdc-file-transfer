@@ -37,7 +37,7 @@ class ConnectionTest(test_base.CdcRsyncTest):
 
     utils.create_test_file(self.local_data_path, 1024)
     res = utils.run_rsync(self.local_data_path,
-                          bad_host + ":" + self.remote_base_dir)
+                          f"{bad_host}:{self.remote_base_dir}")
     self.assertEqual(res.returncode, RETURN_CODE_GENERIC_ERROR)
     self.assertIn('Failed to detect remote architecture', str(res.stderr))
 
@@ -54,16 +54,18 @@ class ConnectionTest(test_base.CdcRsyncTest):
     bad_host = '192.0.2.1'
     start = time.time()
     res = utils.run_rsync(self.local_data_path,
-                          bad_host + ":" + self.remote_base_dir)
+                          f"{bad_host}:{self.remote_base_dir}")
     elapsed_time = time.time() - start
     self.assertGreater(elapsed_time, 4.5)
     self.assertEqual(res.returncode, RETURN_CODE_CONNECTION_TIMEOUT)
     self.assertIn('Error: Server connection timed out', str(res.stderr))
 
     start = time.time()
-    res = utils.run_rsync(self.local_data_path,
-                          bad_host + ":" + self.remote_base_dir,
-                          '--contimeout=1')
+    res = utils.run_rsync(
+        self.local_data_path,
+        f"{bad_host}:{self.remote_base_dir}",
+        '--contimeout=1',
+    )
     elapsed_time = time.time() - start
     self.assertLess(elapsed_time, 3)
     self.assertEqual(res.returncode, RETURN_CODE_CONNECTION_TIMEOUT)
@@ -80,11 +82,10 @@ class ConnectionTest(test_base.CdcRsyncTest):
       local_data_paths.append(path)
 
     with futures.ThreadPoolExecutor(max_workers=num_instances) as executor:
-      res = []
-      for n in range(num_instances):
-        res.append(
-            executor.submit(utils.run_rsync, local_data_paths[n],
-                            self.remote_base_dir))
+      res = [
+          executor.submit(utils.run_rsync, local_data_paths[n],
+                          self.remote_base_dir) for n in range(num_instances)
+      ]
       for r in res:
         self._assert_rsync_success(r.result())
 

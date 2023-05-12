@@ -38,18 +38,26 @@ class DryRunTest(test_base.CdcRsyncTest):
     for file in files:
       utils.create_test_file(self.local_base_dir + file, 987)
 
-    res = utils.run_rsync(self.local_base_dir + 'file1.txt',
-                          self.local_base_dir + 'file2.txt',
-                          self.remote_base_dir, '-v')
+    res = utils.run_rsync(
+        f'{self.local_base_dir}file1.txt',
+        f'{self.local_base_dir}file2.txt',
+        self.remote_base_dir,
+        '-v',
+    )
     self._assert_rsync_success(res)
     self._assert_remote_dir_contains(['file1.txt', 'file2.txt'])
 
     # Dry-run of uploading changed/new/to delete files.
-    utils.create_test_file(self.local_base_dir + 'file2.txt', 2534)
-    res = utils.run_rsync(self.local_base_dir + 'file2.txt',
-                          self.local_base_dir + 'file3.txt',
-                          self.remote_base_dir, '-v', '--dry-run', '--delete',
-                          '-r')
+    utils.create_test_file(f'{self.local_base_dir}file2.txt', 2534)
+    res = utils.run_rsync(
+        f'{self.local_base_dir}file2.txt',
+        f'{self.local_base_dir}file3.txt',
+        self.remote_base_dir,
+        '-v',
+        '--dry-run',
+        '--delete',
+        '-r',
+    )
     self._assert_rsync_success(res)
     self.assertTrue(
         utils.files_count_is(res, missing=1, changed=1, extraneous=1))
@@ -62,8 +70,8 @@ class DryRunTest(test_base.CdcRsyncTest):
     self.assertIn('file3.txt', str(res.stdout))
     self.assertIn('C100%', str(res.stdout))
     self.assertFalse(
-        utils.sha1_matches(self.local_base_dir + 'file2.txt',
-                           self.remote_base_dir + 'file2.txt'))
+        utils.sha1_matches(f'{self.local_base_dir}file2.txt',
+                           f'{self.remote_base_dir}file2.txt'))
 
   def test_dry_run_sync_folder_when_remote_file_recursive_with_delete(self):
     """Dry-runs a recursive upload of a folder while removing a remote file with the same name with --delete."""
@@ -71,24 +79,29 @@ class DryRunTest(test_base.CdcRsyncTest):
     local_folder = self.local_base_dir + 'foldertocopy\\'
     utils.create_test_directory(local_folder)
     utils.get_ssh_command_output(
-        'mkdir -p %s && touch %s' %
-        (self.remote_base_dir, self.remote_base_dir + 'foldertocopy'))
+        f'mkdir -p {self.remote_base_dir} && touch {self.remote_base_dir}foldertocopy'
+    )
 
-    res = utils.run_rsync(self.local_base_dir + 'foldertocopy',
-                          self.remote_base_dir, '-r', '--dry-run', '--delete')
+    res = utils.run_rsync(
+        f'{self.local_base_dir}foldertocopy',
+        self.remote_base_dir,
+        '-r',
+        '--dry-run',
+        '--delete',
+    )
     self._assert_rsync_success(res)
     self.assertTrue(utils.files_count_is(res, extraneous=1, missing_dir=1))
     self.assertFalse(
         utils.does_directory_exist_remotely(self.remote_base_dir +
                                             'foldertocopy'))
     self.assertTrue(
-        utils.does_file_exist_remotely(self.remote_base_dir + 'foldertocopy'))
+        utils.does_file_exist_remotely(f'{self.remote_base_dir}foldertocopy'))
     self.assertIn('1/1 file(s) and 0/0 folder(s) deleted', str(res.stdout))
 
   def test_dry_run_sync_file_when_remote_folder_recursive_with_delete(self):
     """Dry-runs a recursive upload of a file while removing an empty remote folder with the same name with --delete."""
     utils.create_test_file(self.local_data_path, 1024)
-    utils.get_ssh_command_output('mkdir -p %s' % self.remote_data_path)
+    utils.get_ssh_command_output(f'mkdir -p {self.remote_data_path}')
 
     res = utils.run_rsync(self.local_data_path, self.remote_base_dir,
                           '--dry-run', '-r', '--delete')
@@ -101,7 +114,7 @@ class DryRunTest(test_base.CdcRsyncTest):
   def test_dry_run_sync_file_when_remote_folder_empty(self):
     """Dry-runs a non-recursive upload of a file while there is an empty remote folder with the same name."""
     utils.create_test_file(self.local_data_path, 1024)
-    utils.get_ssh_command_output('mkdir -p %s' % self.remote_data_path)
+    utils.get_ssh_command_output(f'mkdir -p {self.remote_data_path}')
 
     res = utils.run_rsync(self.local_data_path, self.remote_base_dir,
                           '--dry-run')

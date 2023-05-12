@@ -52,9 +52,9 @@ class ConsistencyTest(test_base.CdcStreamTest):
     files = [file.replace('\\', '/') for file in files]
     sha1_local = self.sha1sum_local_batch(files)
     for _ in range(counter):
-      utils.get_ssh_command_output('ls -al %s' % self.remote_base_dir)
+      utils.get_ssh_command_output(f'ls -al {self.remote_base_dir}')
       found = utils.get_sorted_files(self.remote_base_dir, '"*"')
-      expected = sorted(['./' + f for f in files + dirs])
+      expected = sorted([f'./{f}' for f in files + dirs])
       if found == expected:
         if not files:
           return True
@@ -81,12 +81,9 @@ class ConsistencyTest(test_base.CdcStreamTest):
     max_file_name_len = int(max_path_len_no_root / (depth + 1) - 2)
     length = utils.RANDOM.randint(1, max_file_name_len)
 
-    # Consider only upper case and digits, as 1.txt and 1.TXT result in 1 file
-    # on Windows.
-    name = ''.join(
+    return ''.join(
         utils.RANDOM.choice(string.ascii_uppercase + string.digits)
-        for i in range(length))
-    return name
+        for _ in range(length))
 
   def _generate_dir_list(self, depth, num_leaf_dirs):
     """Generate a list of directories.
@@ -142,7 +139,7 @@ class ConsistencyTest(test_base.CdcStreamTest):
       number_of_files = utils.RANDOM.randint(min_file_num, max_file_num)
       for _ in range(number_of_files):
         # Add a file extension not to compare if a similar directory exists.
-        file_name = self._generate_random_name(depth=depth) + '.txt'
+        file_name = f'{self._generate_random_name(depth=depth)}.txt'
         if file_name not in files:
           file_path = os.path.join(directory, file_name)
           files.add(file_path)
@@ -196,9 +193,7 @@ class ConsistencyTest(test_base.CdcStreamTest):
     Returns:
         two sets of strings: Relative paths for created files and directories.
     """
-    num_leaf_dirs = 0
-    if depth > 0:
-      num_leaf_dirs = utils.RANDOM.randint(0, 100)
+    num_leaf_dirs = utils.RANDOM.randint(0, 100) if depth > 0 else 0
     logging.debug(('CdcStreamConsistencyTest -> _generate_streamed_dir'
                    ' of depth %i and number of leaf directories %i'), depth,
                   num_leaf_dirs)
@@ -300,8 +295,8 @@ class ConsistencyTest(test_base.CdcStreamTest):
             r'((?:DEBUG|INFO|WARNING|ERROR)\s+)?(.*)', line)
         if match is None:
           continue
-        log_level = match.group(1)
-        log_msg = match.group(2)
+        log_level = match[1]
+        log_msg = match[2]
         # A client side log level marks the beginning of a new log line
         if log_level:
           assert_initialized_line(joined_line)
@@ -422,7 +417,7 @@ class ConsistencyTest(test_base.CdcStreamTest):
     dirs = [directory.replace('\\', '/').rstrip('/') for directory in dirs]
     files = [file.replace('\\', '/') for file in files]
 
-    utils.get_ssh_command_output('ls -al %s' % self.remote_base_dir)
+    utils.get_ssh_command_output(f'ls -al {self.remote_base_dir}')
     self._assert_remote_dir_matches(files + dirs)
     if not files:
       return

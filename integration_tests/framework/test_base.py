@@ -50,11 +50,7 @@ def main():
   # Log to STDERR
   log_format = ('%(levelname)-8s%(asctime)s '
                 '%(filename)s:%(lineno)-3d %(message)s')
-  log_stream = sys.stderr
-
-  if args.log_file:
-    log_stream = open(args.log_file, 'w')
-
+  log_stream = open(args.log_file, 'w') if args.log_file else sys.stderr
   with log_stream:
     logging.basicConfig(
         format=log_format, level=logging.DEBUG, stream=log_stream)

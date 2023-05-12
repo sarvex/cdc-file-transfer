@@ -146,7 +146,7 @@ class CdcStreamTest(unittest.TestCase):
 
   def _assert_stream_success(self, res):
     """Asserts if the return code is 0 and outputs return message with args."""
-    self.assertEqual(res.returncode, 0, 'Return value is ' + str(res))
+    self.assertEqual(res.returncode, 0, f'Return value is {str(res)}')
 
   def _assert_remote_dir_matches(self, file_list):
     """Asserts that the remote directory matches the list of files and directories.
@@ -155,7 +155,7 @@ class CdcStreamTest(unittest.TestCase):
         file_list (list of strings): List of relative paths to check.
     """
     found = utils.get_sorted_files(self.remote_base_dir, '"*"')
-    expected = sorted(['./' + f for f in file_list])
+    expected = sorted([f'./{f}' for f in file_list])
     self.assertListEqual(found, expected)
 
   def _get_cache_size_in_bytes(self):
@@ -175,7 +175,7 @@ class CdcStreamTest(unittest.TestCase):
     # On Linux, an empty directory occupies 4KB.
     self.assertTrue(int(cache_size) >= 4096)
     self.assertGreater(
-        int(utils.get_ssh_command_output('ls %s | wc -l' % self.cache_dir)), 0)
+        int(utils.get_ssh_command_output(f'ls {self.cache_dir} | wc -l')), 0)
 
   def _assert_cdc_fuse_mounted(self, success=True):
     """Asserts that CDC FUSE is appropriately mounted."""
@@ -188,9 +188,8 @@ class CdcStreamTest(unittest.TestCase):
 
   def _clean_cache(self):
     """Removes all data from the asset streaming caches."""
-    logging.info(f'Clearing cache')
-    utils.get_ssh_command_output('rm -rf %s' %
-                                 posixpath.join(self.cache_dir, '*'))
+    logging.info('Clearing cache')
+    utils.get_ssh_command_output(f"rm -rf {posixpath.join(self.cache_dir, '*')}")
     cache_dir = os.path.join(os.environ['APPDATA'], 'cdc-file-transfer',
                              'chunks')
     utils.remove_test_directory(cache_dir)
@@ -218,12 +217,12 @@ class CdcStreamTest(unittest.TestCase):
     Returns:
         bool: Whether the content of the remote directory has changed.
     """
-    logging.info(f'Waiting until remote dir changes')
+    logging.info('Waiting until remote dir changes')
     for _ in range(counter):
       if utils.get_ssh_command_output(self.ls_cmd) != original:
         return True
       time.sleep(0.1)
-      logging.info(f'Still waiting...')
+      logging.info('Still waiting...')
     return False
 
   def _test_dir_content(self, files, dirs, is_exe=False):
@@ -240,27 +239,24 @@ class CdcStreamTest(unittest.TestCase):
     files = [file.replace('\\', '/') for file in files]
 
     # Read the content of the directory once to load some data.
-    utils.get_ssh_command_output('ls -al %s' % self.remote_base_dir)
+    utils.get_ssh_command_output(f'ls -al {self.remote_base_dir}')
     self._assert_remote_dir_matches(files + dirs)
     if not dirs and not files:
       return
-    file_list = list()
-    mapping = dict()
+    file_list = []
+    mapping = {}
     for file in files:
       full_name = posixpath.join(self.remote_base_dir, file)
       self.assertTrue(
           utils.sha1_matches(
               os.path.join(self.local_base_dir, file), full_name))
       file_list.append(full_name)
-      if is_exe:
-        mapping[full_name] = '-rwxr-xr-x'
-      else:
-        mapping[full_name] = '-rw-r--r--'
+      mapping[full_name] = '-rwxr-xr-x' if is_exe else '-rw-r--r--'
     for directory in dirs:
       full_name = posixpath.join(self.remote_base_dir, directory)
       file_list.append(full_name)
       mapping[full_name] = 'drwxr-xr-x'
 
-    ls_res = utils.get_ssh_command_output('ls -ld %s' % ' '.join(file_list))
+    ls_res = utils.get_ssh_command_output(f"ls -ld {' '.join(file_list)}")
     for line in ls_res.splitlines():
       self.assertIn(mapping[list(filter(None, line.split(' ')))[8]], line)

@@ -36,13 +36,11 @@ class DeploymentTest(test_base.CdcRsyncTest):
   def _change_file_preserve_timestamp(self, file):
     """Changes a file preserving it timestamp."""
     utils.get_ssh_command_output(
-        'touch -r %s %s' %
-        (REMOTE_FOLDER + file, REMOTE_FOLDER + file + '.tmp'))
-    utils.get_ssh_command_output('truncate -s +100 %s' % REMOTE_FOLDER + file)
+        f"touch -r {REMOTE_FOLDER + file} {REMOTE_FOLDER + file + '.tmp'}")
+    utils.get_ssh_command_output(f'truncate -s +100 {REMOTE_FOLDER}{file}')
     utils.get_ssh_command_output(
-        'touch -r %s %s' %
-        (REMOTE_FOLDER + file + '.tmp', REMOTE_FOLDER + file))
-    utils.get_ssh_command_output('rm  %s' % (REMOTE_FOLDER + file + '.tmp'))
+        f"touch -r {REMOTE_FOLDER + file + '.tmp'} {REMOTE_FOLDER + file}")
+    utils.get_ssh_command_output(f"rm  {REMOTE_FOLDER + file + '.tmp'}")
 
   def test_no_server(self):
     """Checks that cdc_rsync_server is uploaded if not present remotely.
@@ -51,7 +49,7 @@ class DeploymentTest(test_base.CdcRsyncTest):
       2) Uploads a file.
       3) Verifies that cdc_rsync_server exists in that folder.
     """
-    utils.get_ssh_command_output('rm -rf %s*' % REMOTE_FOLDER)
+    utils.get_ssh_command_output(f'rm -rf {REMOTE_FOLDER}*')
     utils.create_test_file(self.local_data_path, 1024)
     res = utils.run_rsync(self.local_data_path, self.remote_base_dir)
     self._assert_rsync_success(res)
@@ -74,7 +72,7 @@ class DeploymentTest(test_base.CdcRsyncTest):
     # do an "empty" copy.
     utils.run_rsync(self.local_base_dir, self.remote_base_dir)
 
-    remote_server_path = REMOTE_FOLDER + 'cdc_rsync_server'
+    remote_server_path = f'{REMOTE_FOLDER}cdc_rsync_server'
     initial_ts = utils.get_ssh_command_output('stat --format=%%y %s' %
                                               remote_server_path)
     utils.get_ssh_command_output('touch -d \'1 November 2020 00:00\' %s' %
@@ -97,9 +95,9 @@ class DeploymentTest(test_base.CdcRsyncTest):
     self._assert_rsync_success(res)
 
     # Modify cdc_rsync_server and wipe permissions.
-    remote_server_path = REMOTE_FOLDER + 'cdc_rsync_server'
-    utils.get_ssh_command_output('echo "xxx" > %s && chmod 0 %s' %
-                                 (remote_server_path, remote_server_path))
+    remote_server_path = f'{REMOTE_FOLDER}cdc_rsync_server'
+    utils.get_ssh_command_output(
+        f'echo "xxx" > {remote_server_path} && chmod 0 {remote_server_path}')
 
     res = utils.run_rsync(self.local_data_path, self.remote_base_dir)
     self._assert_rsync_success(res)
